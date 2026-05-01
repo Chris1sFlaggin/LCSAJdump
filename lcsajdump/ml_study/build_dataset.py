@@ -139,6 +139,7 @@ def _run_lcsajdump(
         str(darkness),
         "--instructions",
         str(instructions),
+        "--algo",
     ]
     if arch != "auto":
         cmd += ["--arch", arch]

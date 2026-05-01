@@ -476,9 +476,12 @@ def extract_features(
     sm_pivot = 0
     sm_writes = 0
     
-    # SALTA COMPLETAMENTE L'ESTRAZIONE SEMANTICA PER LA CREAZIONE DEL DATASET 
-    # PER EVITARE CHE ANGR BLOCCHI LO SCRIPT SU BINARI GRANDI.
-    # IN FASE DI INFERENCE VERRÀ ESEGUITA REGOLARMENTE.
+    if binary_path and os.path.exists(binary_path):
+        from lcsajdump.ml.semantic_features import extract_semantic_features
+        sem_feats = extract_semantic_features(binary_path, address, gadget_size, arch)
+        sm_controls = sem_feats.get("sm_controls_arg_reg", 0)
+        sm_pivot = sem_feats.get("sm_stack_pivot_size", 0)
+        sm_writes = sem_feats.get("sm_writes_memory", 0)
     
     # ── Assemble feature dict ────────────────────────────────────────────────
     feats = {

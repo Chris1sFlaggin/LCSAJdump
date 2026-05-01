@@ -94,7 +94,7 @@ def auto_detect_env(binary_path):
     is_flag=True,
     help="Use strictly the algorithmic ranking (no ML).",
 )
-@click.version_option(version="2.0.1", prog_name="LCSAJdump")
+@click.version_option(version="2.0.3", prog_name="LCSAJdump")
 def main(
     binary_path,
     depth,
@@ -123,7 +123,7 @@ def main(
 ██║     ██║     ╚════██║  ██╔══██║ ██╗  ██║██║  ██║██║   ██║██║╚██╔╝██║██╔═══╝ 
 ███████╗╚██████╗███████║  ██║  ██║ ╚█████╔╝██████╔╝╚██████╔╝██║ ╚═╝ ██║██║     
 ╚══════╝ ╚═════╝╚══════╝  ╚═╝  ╚═╝  ╚════╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝     
-                                    v2.0.2
+                                    v2.0.3
 
 RISC-V    ARM64    x86-64
 

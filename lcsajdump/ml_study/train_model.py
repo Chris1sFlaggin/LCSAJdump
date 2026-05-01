@@ -49,16 +49,17 @@ DEFAULT_PARAMS = {
     "ndcg_eval_at": [1, 3, 5, 10],
     "label_gain": [0, 1],  # gain for label 0 and 1
     # Tree structure — deeper trees to capture finer-grained gadget patterns
-    "num_leaves": 63,
+    "num_leaves": 127,
     "max_depth": 8,
-    "min_child_samples": 3,
+    "min_child_samples": 1,
     # Learning
-    "learning_rate": 0.03,
-    "n_estimators": 1000,
+    "learning_rate": 0.01,
+    "n_estimators": 2000,
     "subsample": 0.8,
     "colsample_bytree": 0.8,
     "reg_alpha": 0.05,
     "reg_lambda": 0.05,
+    "early_stopping_round": 200,
     "verbose": -1,
     "random_state": 42,
 }
