@@ -163,7 +163,7 @@ When evaluated on monolithic, real-world executables like `libc.so.6`, the engin
 
 The repository is structured to support both end-users and ML researchers.
 
-* **Production Engine:** The core CLI seamlessly integrates the inference engine using models hosted on [Hugging Face](https://huggingface.co/chris1sflaggin/chainfinder_v4_hybrid), requiring no manual model loading.
+* **Production Engine:** The core CLI seamlessly integrates the inference engine using models hosted on [Hugging Face](https://huggingface.co/chris1sflaggin/chainfinder_hybrid), requiring no manual model loading.
 * **ML Pipeline:** The `lcsajdump/ml_study/` directory contains the complete pipeline used to train the models:
   * `build_dataset.py`: Extracts structural and semantic features from a corpus of CTF binaries.
   * `train_model.py`: Trains the LightGBM LambdaRank model and outputs the `.pkl` models.
