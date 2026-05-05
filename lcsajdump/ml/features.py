@@ -227,8 +227,24 @@ def _insn_dict(insn) -> dict:
     return {"mnemonic": insn.mnemonic, "op_str": insn.op_str}
 
 
+_UNCONDITIONAL_CONTROLLED = frozenset({"pop", "c.ldsp", "c.lwsp"})  # always read from sp
+_CONDITIONAL_SP_LOADS = frozenset({"ldp", "ldr", "ldur", "ld", "lw", "lh", "lb", "lwu", "lhu", "lbu", "c.ld", "c.lw"})
+
+
+def _is_sp_relative(op_str: str) -> bool:
+    """True if memory operand uses sp/rsp/esp as base register."""
+    s = op_str.lower()
+    return ("[sp" in s or "[rsp" in s or "[esp" in s
+            or "(sp)" in s or ",sp]" in s or ", sp]" in s)
+
+
 def clobbered_registers(instructions: list) -> set:
-    """Set of registers written by the instruction sequence (heuristic)."""
+    """Set of registers written by the instruction sequence (heuristic).
+
+    Excludes *controlled* writes: pop / stack-loads (user-supplied values from stack)
+    and xor reg,reg / sub reg,reg zeroing idioms (known constant). These are intentional
+    register-control patterns required by pwntools-style ROP chains, not noise.
+    """
     written = set()
     for raw in instructions:
         insn = _insn_dict(raw)
@@ -238,9 +254,22 @@ def clobbered_registers(instructions: list) -> set:
         op_str = insn.get("op_str", "")
         if not op_str:
             continue
+        # Always-controlled: x86 pop, RISC-V compressed sp loads
+        if mnem in _UNCONDITIONAL_CONTROLLED:
+            continue
+        # Conditional: ARM/RISC-V loads — controlled only if source is sp
+        if mnem in _CONDITIONAL_SP_LOADS and _is_sp_relative(op_str):
+            continue
         # x86 store heuristic: mov [mem], reg / mov [mem], imm
         if mnem in ("mov", "movl", "movq") and op_str.lstrip().startswith("["):
             continue
+        # Zeroing idiom: xor/sub reg, reg → known constant (controlled)
+        if mnem in ("xor", "sub", "eor"):
+            parts = [p.strip().lower() for p in op_str.split(",")]
+            if len(parts) == 2 and parts[0] == parts[1]:
+                continue
+            if len(parts) == 3 and parts[1] == parts[2]:  # arm64: eor x0, x0, x0
+                continue
         first = op_str.split(",")[0].strip().lstrip("*").lower()
         first = first.lstrip("[").split("[")[-1].strip()
         if _REG_RE.match(first):

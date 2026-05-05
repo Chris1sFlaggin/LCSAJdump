@@ -1,4 +1,5 @@
 import re
+import capstone
 from collections import defaultdict
 from .loader import draw_progress
 from .config import ARCH_PROFILES
@@ -26,6 +27,7 @@ class LCSAJGraph:
 
     def build(self):
         self._create_nodes()
+        self._discover_unaligned_x86()
         self._build_edges()
 
     def _create_nodes(self):
@@ -56,6 +58,38 @@ class LCSAJGraph:
         if current_block_insns:
             self._add_node(block_start, current_block_insns)
         draw_progress(total_insns, total_insns, "Building Graph")
+
+    def _discover_unaligned_x86(self):
+        if self.arch not in ["x86_64", "x86_32"]:
+            return
+            
+        print("[*] Discovering unaligned shadow instructions...")
+        md = capstone.Cs(self.profile["cs_arch"], self.profile["cs_mode"])
+        md.detail = True
+        
+        shadow_nodes = []
+        for insn in self.instructions:
+            if insn.size > 1:
+                b = bytes(insn.bytes)
+                for i in range(1, insn.size):
+                    slice_bytes = b[i:]
+                    for shadow_insn in md.disasm(slice_bytes, insn.address + i):
+                        if shadow_insn.size == len(slice_bytes):
+                            start_addr = shadow_insn.address
+                            if start_addr not in self.insn_to_block_start:
+                                node = {
+                                    'start': start_addr,
+                                    'end': start_addr,
+                                    'insns': [shadow_insn],
+                                    'last_insn': shadow_insn
+                                }
+                                shadow_nodes.append(node)
+                        break
+                        
+        for node in shadow_nodes:
+            self.nodes.append(node)
+            self.addr_to_node[node['start']] = node
+            self.insn_to_block_start[node['start']] = node['start']
 
     def _add_node(self, start, insns):
         node = {'start': start, 'end': insns[-1].address, 'insns': insns, 'last_insn': insns[-1]}
@@ -107,6 +141,7 @@ class LCSAJGraph:
         graph and final node list are trimmed to the reachable subgraph.
         """
         self._create_nodes()
+        self._discover_unaligned_x86()
         tail_starts = self._find_tail_starts()
         reachable = self._bfs_reachable_from_tails(tail_starts, max_depth)
         self._build_edges_filtered(reachable)
@@ -142,6 +177,119 @@ class LCSAJGraph:
                             tails.add(n['start'])
                     except (ValueError, KeyError):
                         pass
+        return tails
+
+    def _bfs_reachable_from_tails(self, tail_starts: set, max_depth: int) -> set:
+        """BFS backwards from tail block-starts through the raw block graph.
+
+        Builds a lightweight predecessor map on-the-fly (not stored) and walks backwards
+        up to max_depth hops. Returns the set of reachable block-start addresses.
+        """
+        insn_map = self.insn_to_block_start
+        uncond_jumps = self.unconditional_jumps
+        jump_mnems = self.jump_mnems
+        branch_prefixes = self.branch_prefixes
+
+        pred: dict = defaultdict(set)
+        for node in self.nodes:
+            last = node['last_insn']
+            mnem = last.mnemonic.lower()
+            start_addr = node['start']
+
+            if mnem not in uncond_jumps:
+                next_addr = last.address + last.size
+                if next_addr in insn_map:
+                    pred[insn_map[next_addr]].add(start_addr)
+
+            if mnem in jump_mnems or mnem.startswith(branch_prefixes):
+                match = HEX_PATTERN.search(last.op_str)
+                if match:
+                    try:
+                        addr = int(match.group(1), 16)
+                        if addr in insn_map:
+                            pred[insn_map[addr]].add(start_addr)
+                    except ValueError:
+                        pass
+
+        visited = set(tail_starts)
+        frontier = set(tail_starts)
+        for _ in range(max_depth):
+            next_frontier = set()
+            for node_start in frontier:
+                for p in pred.get(node_start, ()):
+                    if p not in visited:
+                        visited.add(p)
+                        next_frontier.add(p)
+            if not next_frontier:
+                break
+            frontier = next_frontier
+        return visited
+
+    def _build_edges_filtered(self, reachable: set):
+        """Like _build_edges() but only adds reverse_graph entries for nodes in reachable."""
+        print("[*] Building edges (lazy)...")
+        insn_map = self.insn_to_block_start
+        uncond_jumps = self.unconditional_jumps
+        jump_mnems = self.jump_mnems
+        branch_prefixes = self.branch_prefixes
+        rev_graph = self.reverse_graph
+
+        for node in self.nodes:
+            start_addr = node['start']
+            if start_addr not in reachable:
+                continue
+            last = node['last_insn']
+            mnem = last.mnemonic.lower()
+
+            if mnem not in uncond_jumps:
+                next_addr = last.address + last.size
+                if next_addr in insn_map:
+                    target = insn_map[next_addr]
+                    if target in reachable:
+                        rev_graph[target].append(start_addr)
+
+            if mnem in jump_mnems or mnem.startswith(branch_prefixes):
+                match = HEX_PATTERN.search(last.op_str)
+                if match:
+                    try:
+                        addr = int(match.group(1), 16)
+                        if addr in insn_map:
+                            target = insn_map[addr]
+                            if target in reachable:
+                                rev_graph[target].append(start_addr)
+                    except ValueError:
+                        pass
+
+    def get_gadget_tails(self):
+        ret_mnems = self.ret_mnems
+        uncond_jumps = self.unconditional_jumps
+        call_mnems = self.profile.get("call_mnems", set())
+        insn_map = self.insn_to_block_start
+        tails = []
+
+        for n in self.nodes:
+            last_insn = n['last_insn']
+            mnem = last_insn.mnemonic.lower()
+            op_str = last_insn.op_str
+
+            if mnem in ret_mnems:
+                tails.append(n)
+
+            elif mnem in uncond_jumps and mnem in self.trampoline_mnems:
+                hex_match = HEX_PATTERN.search(op_str)
+
+                if not hex_match:
+                    tails.append(n)
+
+                elif mnem in call_mnems:
+                    try:
+                        target_addr = int(hex_match.group(1), 16)
+                        if target_addr in insn_map:
+                            n['direct_call_target'] = target_addr
+                            tails.append(n)
+                    except (ValueError, KeyError):
+                        pass
+
         return tails
 
     def _bfs_reachable_from_tails(self, tail_starts: set, max_depth: int) -> set:
