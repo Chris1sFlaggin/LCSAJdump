@@ -47,26 +47,29 @@ ARCH_PROFILES = {
         "pivot_always_mnems": frozenset(),
         "pivot_sp_mnems": frozenset({"mv", "c.mv", "addi", "c.addi"}),
         "stack_pointer_reg": "sp",
-        # Optuna unified, dataset v14, 26 groups, 200 trials (NDCG@5 improved +0.989)
+        # Optuna unified, dataset v5, 2 groups, 150 trials (NDCG@5 improved +0.3095)
         "scoring_weights": {
           "base_score": 100,
-          "insn_penalty": 12,
-          "bonus_link_reg": 1,
-          "bonus_arg_reg": 1,
-          "bonus_frame_reg": 1,
-          "penalty_internal_call": 1,
-          "bonus_trampoline": 1,
-          "penalty_bad_ret": 854,
-          "bonus_direct_call": 35,
-          "bonus_pivot": 1,
-          "bonus_syscall": 123
+          "insn_penalty": 28,
+          "bonus_link_reg": 20,
+          "bonus_arg_reg": 135,
+          "bonus_frame_reg": 95,
+          "penalty_internal_call": 73,
+          "bonus_trampoline": 58,
+          "penalty_bad_ret": 146,
+          "bonus_direct_call": 45,
+          "bonus_pivot": 33,
+          "bonus_syscall": 43,
+          "clobber_penalty": 56,
+          "long_chain_penalty": 8,
+          "max_clobber": 4
         },
         "search_params": {
-          "limit": 5,
-          "darkness": 14,
-          "d": 17,
-          "i": 44,
-          "m": 19
+          "limit": 12,
+          "darkness": 7,
+          "d": 3,
+          "i": 11,
+          "m": 16
         },
     },
     "x86_64": {
@@ -107,26 +110,29 @@ ARCH_PROFILES = {
             {"xchg", "pop"}
         ),  # Rimosso 'mov' per evitare falsi positivi su prologhi funzione
         "stack_pointer_reg": "rsp",
-        # Optuna unified, dataset v14, 26 groups, 200 trials (NDCG@5 improved +0.473)
+        # Optuna unified, dataset v5, 12 groups, 150 trials (NDCG@5 improved +0.6425)
         "scoring_weights": {
           "base_score": 100,
-          "insn_penalty": 140,
-          "bonus_link_reg": 1,
-          "bonus_arg_reg": 1,
-          "bonus_frame_reg": 1,
-          "penalty_internal_call": 1,
-          "bonus_trampoline": 1,
-          "penalty_bad_ret": 649,
-          "bonus_direct_call": 10,
-          "bonus_pivot": 1,
-          "bonus_syscall": 0
+          "insn_penalty": 21,
+          "bonus_link_reg": 48,
+          "bonus_arg_reg": 60,
+          "bonus_frame_reg": 62,
+          "penalty_internal_call": 57,
+          "bonus_trampoline": 11,
+          "penalty_bad_ret": 105,
+          "bonus_direct_call": 14,
+          "bonus_pivot": 91,
+          "bonus_syscall": 12,
+          "clobber_penalty": 165,
+          "long_chain_penalty": 32,
+          "max_clobber": 2
         },
         "search_params": {
-            "limit": 5,
-            "darkness": 6,
-            "d": 12,
-            "i": 128,
-            "m": 21
+            "limit": 17,
+            "darkness": 4,
+            "d": 3,
+            "i": 6,
+            "m": 12
         },
     },
     "x86_32": {
@@ -161,26 +167,29 @@ ARCH_PROFILES = {
         "pivot_always_mnems": frozenset({"leave"}),
         "pivot_sp_mnems": frozenset({"xchg", "pop"}),
         "stack_pointer_reg": "esp",
-        # Optuna unified, dataset v14, 26 groups, 200 trials (NDCG@5 improved +0.700)
+        # Optuna unified, dataset v5, 7 groups, 150 trials (NDCG@5 improved +0.5870)
         "scoring_weights": {
           "base_score": 100,
-          "insn_penalty": 21,
-          "bonus_link_reg": 1,
-          "bonus_arg_reg": 1,
-          "bonus_frame_reg": 1,
-          "penalty_internal_call": 1,
-          "bonus_trampoline": 1,
-          "penalty_bad_ret": 738,
-          "bonus_direct_call": 15,
-          "bonus_pivot": 1,
-          "bonus_syscall": 56
+          "insn_penalty": 19,
+          "bonus_link_reg": 91,
+          "bonus_arg_reg": 36,
+          "bonus_frame_reg": 90,
+          "penalty_internal_call": 226,
+          "bonus_trampoline": 15,
+          "penalty_bad_ret": 24,
+          "bonus_direct_call": 7,
+          "bonus_pivot": 134,
+          "bonus_syscall": 135,
+          "clobber_penalty": 142,
+          "long_chain_penalty": 50,
+          "max_clobber": 3
         },
         "search_params": {
-          "limit": 5,
-          "darkness": 9,
-          "d": 13,
-          "i": 35,
-          "m": 9
+          "limit": 26,
+          "darkness": 4,
+          "d": 4,
+          "i": 11,
+          "m": 10
         },
     },
     "arm64": {
@@ -201,26 +210,29 @@ ARCH_PROFILES = {
         "pivot_always_mnems": frozenset(),
         "pivot_sp_mnems": frozenset({"mov", "add", "sub"}),
         "stack_pointer_reg": "sp",
-        # Optuna unified, dataset v14, 26 groups, 200 trials (NDCG@5 improved +0.384)
+        # Optuna unified, dataset v5, 6 groups, 150 trials (NDCG@5 improved +0.4339)
         "scoring_weights": {
           "base_score": 100,
           "insn_penalty": 15,
-          "bonus_link_reg": 1,
-          "bonus_arg_reg": 1,
-          "bonus_frame_reg": 1,
-          "penalty_internal_call": 1,
-          "bonus_trampoline": 1,
-          "penalty_bad_ret": 685,
-          "bonus_direct_call": 0,
-          "bonus_pivot": 1,
-          "bonus_syscall": 127
+          "bonus_link_reg": 80,
+          "bonus_arg_reg": 116,
+          "bonus_frame_reg": 12,
+          "penalty_internal_call": 162,
+          "bonus_trampoline": 94,
+          "penalty_bad_ret": 196,
+          "bonus_direct_call": 74,
+          "bonus_pivot": 135,
+          "bonus_syscall": 49,
+          "clobber_penalty": 57,
+          "long_chain_penalty": 12,
+          "max_clobber": 4
         },
         "search_params": {
-          "limit": 5,
+          "limit": 44,
           "darkness": 4,
-          "d": 12,
-          "i": 164,
-          "m": 29
+          "d": 4,
+          "i": 4,
+          "m": 0
         },
 
     },

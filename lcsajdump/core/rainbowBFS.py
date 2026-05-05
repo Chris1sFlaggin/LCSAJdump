@@ -3,6 +3,19 @@ import json
 import sys
 import re
 
+try:
+    from lcsajdump.ml.features import clobbered_registers as _clobber_fn
+    _HAVE_CLOBBER = True
+except ImportError:
+    _HAVE_CLOBBER = False
+
+
+def _count_clobbered(insns):
+    """Count distinct registers clobbered by an instruction sequence."""
+    if _HAVE_CLOBBER:
+        return len(_clobber_fn(insns))
+    return 0
+
 
 def reg_in_op(reg_config, op_str):
     if not reg_config:
@@ -46,6 +59,9 @@ class RainbowFinder:
         self.bonus_pivot = self.weights.get("bonus_pivot", 0)
         self.syscall_mnems = self.profile.get("syscall_mnems", frozenset())
         self.bonus_syscall = self.weights.get("bonus_syscall", 80)
+        self.clobber_penalty = self.weights.get("clobber_penalty", 60)
+        self.long_chain_penalty = self.weights.get("long_chain_penalty", 25)
+        self.max_clobber = self.weights.get("max_clobber", 3)
 
     @staticmethod
     def _addr_contains_bad_bytes(addr, bad_bytes):
@@ -65,6 +81,10 @@ class RainbowFinder:
                 full_insns.extend(self.gm.addr_to_node[addr]["insns"])
 
         score -= len(full_insns) * self.insn_penalty
+
+        n_clobber = _count_clobbered(full_insns)
+        score -= n_clobber * self.clobber_penalty
+        score -= max(0, len(full_insns) - 5) * self.long_chain_penalty
 
         has_link_reg = any(reg_in_op(self.l_reg, i.op_str) for i in full_insns)
         has_arg_reg = any(reg_in_op(self.a_reg, i.op_str) for i in full_insns)
@@ -239,6 +259,13 @@ class RainbowFinder:
                     if self._addr_contains_bad_bytes(start_addr, bad_bytes):
                         continue
 
+                full_g_insns = []
+                for addr in g:
+                    if addr in self.gm.addr_to_node:
+                        full_g_insns.extend(self.gm.addr_to_node[addr]["insns"])
+                if _count_clobbered(full_g_insns) > self.max_clobber:
+                    continue
+
                 s = self.score_gadget(g)
                 if s < min_score:
                     continue
@@ -303,6 +330,13 @@ class RainbowFinder:
                     ]
                     if not addrs:
                         continue
+
+                path_insns = []
+                for addr in path:
+                    if addr in self.gm.addr_to_node:
+                        path_insns.extend(self.gm.addr_to_node[addr]["insns"])
+                if _count_clobbered(path_insns) > self.max_clobber:
+                    continue
 
                 s = self.score_gadget(path)
                 if s < min_score:
@@ -377,6 +411,13 @@ class RainbowFinder:
                 ]
                 if not addrs:
                     continue
+
+            json_path_insns = []
+            for addr in path:
+                if addr in self.gm.addr_to_node:
+                    json_path_insns.extend(self.gm.addr_to_node[addr]["insns"])
+            if _count_clobbered(json_path_insns) > self.max_clobber:
+                continue
 
             s = self.score_gadget(path)
             if s < min_score:

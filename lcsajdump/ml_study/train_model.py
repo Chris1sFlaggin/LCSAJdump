@@ -47,7 +47,7 @@ DEFAULT_PARAMS = {
     "objective": "lambdarank",
     "metric": "ndcg",
     "ndcg_eval_at": [1, 3, 5, 10],
-    "label_gain": [0, 1],  # gain for label 0 and 1
+    "label_gain": [0, 1, 2, 3, 4],  # multi-level: 0=bad/noisy, 4=perfect
     # Tree structure — deeper trees to capture finer-grained gadget patterns
     "num_leaves": 127,
     "max_depth": 8,
@@ -437,6 +437,18 @@ if __name__ == "__main__":
             if col not in df.columns:
                 print(f"[Warning] Manca la feature {col} nel CSV! Faccio padding con 0, ma dovresti ricreare il dataset.", file=sys.stderr)
                 df[col] = 0
+
+        # Noise-aware multi-level relabeling: combines human annotation with noise metrics.
+        # Scale 0-4: human positives get head start, clobber/chain noise degrade score.
+        df["label"] = (
+            df["label"].clip(0, 1) * 2                         # human-verified: 0 or 2
+            + (df["clobber_count"] == 0).astype(int)           # +1 zero clobber
+            + (df["insn_count"] <= 4).astype(int)              # +1 short chain
+            - (df["is_internal_call"].astype(int))             # -1 internal call
+            - ((df["clobber_count"] >= 3).astype(int) * 2)    # -2 noisy gadget
+        ).clip(0, 4)
+        print(f"[trainer] Relabeled: {df['label'].value_counts().sort_index().to_dict()}")
+
         X = df[FEATURE_NAMES].to_dict("records")
         y = df["label"].tolist()
         # Rebuild groups from binary_id column (unique per arch+binary pair)

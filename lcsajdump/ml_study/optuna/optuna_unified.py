@@ -42,9 +42,12 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 def _score_heuristic(row: dict, weights: dict) -> float:
     """
     Reproduce the RainbowBFS scoring formula from a feature-dict row.
+    Includes clobber_penalty and long_chain_penalty to mirror the fixed scorer.
     """
     s = weights["base_score"]
     s -= row["insn_count"] * weights["insn_penalty"]
+    s -= row.get("clobber_count", 0) * weights.get("clobber_penalty", 60)
+    s -= max(0, row["insn_count"] - 5) * weights.get("long_chain_penalty", 25)
     if row["hits_link_reg"]:
         s += weights["bonus_link_reg"]
     if row["hits_arg_reg"]:
@@ -80,10 +83,9 @@ def _eval_weights(df_arch: pd.DataFrame, weights: dict, search_params: dict) -> 
     i_limit = search_params.get("i", 100)
     m_limit = search_params.get("m", 0)
 
-    # Filter gadgets that would be pruned by structural params
-    df_filtered = df_arch[
-        (df_arch["insn_count"] <= i_limit) & (df_arch["heuristic_score"] >= m_limit)
-    ].copy()
+    # Filter by instruction count only — heuristic_score column is pre-computed with
+    # old weights and cannot be used as a filter here; apply m_limit to fresh scores below.
+    df_filtered = df_arch[df_arch["insn_count"] <= i_limit].copy()
 
     if len(df_filtered) == 0:
         return 0.0
@@ -92,6 +94,15 @@ def _eval_weights(df_arch: pd.DataFrame, weights: dict, search_params: dict) -> 
     scores = df_filtered.apply(
         lambda r: _score_heuristic(r.to_dict(), weights), axis=1
     ).values
+
+    # Apply m_limit to freshly-computed scores (not stale heuristic_score column)
+    keep = scores >= m_limit
+    df_filtered = df_filtered[keep]
+    scores = scores[keep]
+
+    if len(df_filtered) == 0:
+        return 0.0
+
     labels = df_filtered["label"].values
     binary_ids = df_filtered["binary_id"].values
 
@@ -129,28 +140,37 @@ def make_objective(df_arch: pd.DataFrame):
         # Scoring weights (da ottimizzare)
         weights = {
             "base_score": 100,
-            "insn_penalty": trial.suggest_int("insn_penalty", 1, 60),
-            "bonus_link_reg": trial.suggest_int("bonus_link_reg", 0, 100),
-            "bonus_arg_reg": trial.suggest_int("bonus_arg_reg", 0, 150),
-            "bonus_frame_reg": trial.suggest_int("bonus_frame_reg", 0, 100),
-            "penalty_internal_call": trial.suggest_int("penalty_internal_call", 0, 200),
-            "bonus_trampoline": trial.suggest_int("bonus_trampoline", 0, 100),
-            "penalty_bad_ret": trial.suggest_int("penalty_bad_ret", 0, 700),
+            "insn_penalty": trial.suggest_int("insn_penalty", 1, 30),
+            "bonus_link_reg": trial.suggest_int("bonus_link_reg", 5, 100),
+            "bonus_arg_reg": trial.suggest_int("bonus_arg_reg", 5, 150),
+            "bonus_frame_reg": trial.suggest_int("bonus_frame_reg", 5, 100),
+            "penalty_internal_call": trial.suggest_int("penalty_internal_call", 50, 300),
+            "bonus_trampoline": trial.suggest_int("bonus_trampoline", 5, 100),
+            "penalty_bad_ret": trial.suggest_int("penalty_bad_ret", 0, 200),
             "bonus_direct_call": trial.suggest_int("bonus_direct_call", 0, 80),
-            "bonus_pivot": trial.suggest_int("bonus_pivot", 0, 150),
+            "bonus_pivot": trial.suggest_int("bonus_pivot", 5, 150),
             "bonus_syscall": trial.suggest_int("bonus_syscall", 0, 150),
+            "clobber_penalty": trial.suggest_int("clobber_penalty", 20, 200),
+            "long_chain_penalty": trial.suggest_int("long_chain_penalty", 5, 80),
         }
 
         # Search params (da ottimizzare) — nomi devono corrispondere a config.py
         search_params = {
-            "limit": trial.suggest_int("limit", 5, 100),    # Numero gadget da mostrare
-            "darkness": trial.suggest_int("darkness", 2, 20),  # Pruning BFS (strutturale)
-            "d": trial.suggest_int("d", 3, 20),              # Profondità massima (strutturale)
-            "i": trial.suggest_int("i", 10, 200),            # Max istruzioni per gadget
-            "m": trial.suggest_int("m", 0, 50),              # Punteggio minimo
+            "limit": trial.suggest_int("limit", 10, 50),
+            "darkness": trial.suggest_int("darkness", 2, 8),
+            "d": trial.suggest_int("d", 3, 10),
+            "i": trial.suggest_int("i", 4, 15),     # was 10..200 — caused i=128 collapse
+            "m": trial.suggest_int("m", 0, 20),
         }
 
-        return _eval_weights(df_arch, weights, search_params)
+        ndcg = _eval_weights(df_arch, weights, search_params)
+
+        # Anti-degeneracy: penalize weights collapsed to floor (floor=5 for bonuses)
+        floor_pen = 0.02 * sum(
+            1 for k, v in weights.items()
+            if k.startswith("bonus_") and v <= 5
+        )
+        return ndcg - floor_pen
 
     return objective
 

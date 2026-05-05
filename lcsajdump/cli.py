@@ -94,6 +94,13 @@ def auto_detect_env(binary_path):
     is_flag=True,
     help="Use strictly the algorithmic ranking (no ML).",
 )
+@click.option(
+    "--max-clobber",
+    "-mc",
+    default=None,
+    type=int,
+    help="Hard max clobbered registers per gadget (overrides profile default).",
+)
 @click.version_option(version="2.0.3", prog_name="LCSAJdump")
 def main(
     binary_path,
@@ -109,6 +116,7 @@ def main(
     json_output,
     all_exec,
     algo,
+    max_clobber,
 ):
     """
     LCSAJ ROP Finder.
@@ -173,6 +181,8 @@ https://github.com/sponsors/Chris1sFlaggin - Support the project! | https://chri
     finder = RainbowFinder(
         gb, max_depth=depth, max_darkness=darkness, max_insns=instructions
     )
+    if max_clobber is not None:
+        finder.max_clobber = max_clobber
     gadgets = finder.search()
 
     use_ml = not algo
