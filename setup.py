@@ -115,7 +115,6 @@ setup(
     install_requires=[
         "capstone",
         "pyelftools",
-        "networkx",
         "click",
         "regex",
     ],

@@ -38,11 +38,11 @@ LCSAJdump overcomes this limitation by reconstructing the **Control-Flow Graph (
 ## Key Features
 
 * **Multi-Architecture Support:** Native support for RISC-V (64GC), x86-64, and ARM64, easily extendable to other architectures via modular profiles.
-* **Graph-Based Analysis:** Segments the `.text` section into LCSAJ basic blocks and reconstructs flow relationships using `NetworkX`.
+* **Graph-Based Analysis:** Segments the `.text` section into LCSAJ basic blocks and reconstructs flow relationships through a custom-built reverse control-flow graph (lightweight adjacency representation, no heavyweight graph dependency).
 * **Rainbow BFS Algorithm:** Proprietary backward Breadth-First Search starting from control-flow sinks. Now features an **O(1) Early-Drop Uniqueness Filter** and **Hard-Cap Instruction Limits** to prevent state explosion and ensure ultra-fast analysis even on dense CISC binaries.
 * **Lazy Graph Build:** Graph construction retains only nodes reachable from gadget tails within `--depth` hops, drastically reducing memory and build time on large binaries (e.g., `libc`) while producing **identical results**.
 * **Two-Stage Ranking Engine:** Combines a hyper-fast heuristic baseline (Bayesian-optimized via Optuna) with a deep-learning **LightGBM ML model** that refines gadget quality using structural and semantic features.
-* **Zero-Overhead Inference:** The ML model is integrated natively and runs by default, processing tens of thousands of nodes in seconds. It acts as a highly effective filter, rejecting noisy jumps and returning clean, highly controllable gadget chains. Hosted on [Hugging Face](https://huggingface.co/chris1sflaggin/chainfinder_v4_hybrid).
+* **Zero-Overhead Inference:** The ML model is integrated natively and runs by default, processing tens of thousands of nodes in seconds. It acts as a highly effective filter, rejecting noisy jumps and returning clean, highly controllable gadget chains. Hosted on [Hugging Face](https://huggingface.co/chris1sflaggin/chainfinder_hybrid).
 * **Pruning Parameters:** Configurable "Darkness" factor to balance analysis depth and performance, preventing infinite loops in cyclic graphs.
 
 ---
@@ -155,7 +155,7 @@ LCSAJdump is backed by a rigorous, incrementally validated test suite located in
 
 Through 14 major iterations of semantic feature engineering, the hybrid model has learned to discriminate gadgets based on actual memory side-effects (extracted via `angr` symbolic execution) rather than purely syntactic heuristics. 
 
-When evaluated on monolithic, real-world executables like `libc.so.6`, the engine achieves a mathematically near-perfect **NDCG@1 = 0.9833** and **NDCG@10 = 0.9656**. The Two-Stage engine successfully prioritizes clean stack-popping sequences and `ret2csu`-like calls, while heavily penalizing crash-prone fixed-offset jumps that deceive traditional static scanners.
+Evaluated with group-aware 5-fold cross-validation (test binaries never seen during training), the ranker achieves **NDCG@1 = 0.914 ± 0.047** and **NDCG@10 = 0.922 ± 0.052**, meaning the most useful gadgets are consistently placed at the top of the output. The Two-Stage engine successfully prioritizes clean stack-popping sequences and `ret2csu`-like calls, while heavily penalizing crash-prone fixed-offset jumps that deceive traditional static scanners.
 
 ---
 

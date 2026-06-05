@@ -1,7 +1,6 @@
 # Core dependencies (required)
 capstone>=5.0.0
 pyelftools>=0.32
-networkx>=3.0
 click>=8.0
 regex>=2024.0.0
 
