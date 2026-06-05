@@ -1,0 +1,2 @@
+[console_scripts]
+lcsajdump = lcsajdump.cli:main
