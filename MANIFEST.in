@@ -23,3 +23,4 @@ global-exclude PAPER.md
 
 # Escludiamo il materiale di ricerca e i dataset dal pacchetto di produzione
 prune lcsajdump/ml_study
+prune lcsajdump/ml/datasets

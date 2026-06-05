@@ -101,7 +101,7 @@ def auto_detect_env(binary_path):
     type=int,
     help="Hard max clobbered registers per gadget (overrides profile default).",
 )
-@click.version_option(version="2.0.5", prog_name="LCSAJdump")
+@click.version_option(version="2.0.6", prog_name="LCSAJdump")
 def main(
     binary_path,
     depth,
@@ -131,7 +131,7 @@ def main(
 ██║     ██║     ╚════██║  ██╔══██║ ██╗  ██║██║  ██║██║   ██║██║╚██╔╝██║██╔═══╝ 
 ███████╗╚██████╗███████║  ██║  ██║ ╚█████╔╝██████╔╝╚██████╔╝██║ ╚═╝ ██║██║     
 ╚══════╝ ╚═════╝╚══════╝  ╚═╝  ╚═╝  ╚════╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝     
-                                    v2.0.5
+                                    v2.0.6
 
 RISC-V    ARM64    x86-64
 
