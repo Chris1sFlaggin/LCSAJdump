@@ -149,7 +149,7 @@ lcsajdump --algo <path_to_binary>
 
 ---
 
-## 📊 Accuracy & Benchmarks
+## Accuracy & Benchmarks
 
 LCSAJdump is backed by a rigorous, incrementally validated test suite located in the `benchmarkTests/` directory.
 
