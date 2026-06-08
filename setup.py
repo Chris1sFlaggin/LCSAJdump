@@ -6,7 +6,7 @@ import os
 def ask_install_plugins():
     """Interactively ask user if they want to install plugins during pip install."""
     print("\n" + "="*60)
-    print("LCSAJdump v2.0.6")
+    print("LCSAJdump v2.0.7")
     print("="*60)
     print("\nLCSAJdump includes optional integrations for popular tools:")
     print("  1. GDB/pwndbg Plugin  - Run 'lcsaj' command inside the debugger")
@@ -84,7 +84,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="lcsajdump",
-    version="2.0.6",
+    version="2.0.7",
     author="Chris1sFlaggin",
     author_email="lcsajdump@chris1sflaggin.it",
     description="A Graph-Based ROP Gadget Finder for every architecture",
