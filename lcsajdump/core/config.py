@@ -5,12 +5,17 @@ ARM64_ARCH = (
     if hasattr(capstone, "CS_ARCH_AARCH64")
     else capstone.CS_ARCH_ARM64
 )
+RISCV64_MODE = (
+    capstone.CS_MODE_RISCV_C
+    if hasattr(capstone, "CS_MODE_RISCV_C")
+    else capstone.CS_MODE_RISCVC
+)
 
 ARCH_PROFILES = {
     "riscv64": {
         "name": "RISC-V 64-bit",
         "cs_arch": capstone.CS_ARCH_RISCV,
-        "cs_mode": capstone.CS_MODE_RISCV64 | capstone.CS_MODE_RISCVC,
+        "cs_mode": capstone.CS_MODE_RISCV64 | RISCV64_MODE,
         "step": 2,
         "jump_mnems": {
             "j",
